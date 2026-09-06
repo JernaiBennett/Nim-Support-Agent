@@ -1,0 +1,188 @@
+[
+  {
+    "id": "01_getting_started_0",
+    "source": "01_getting_started",
+    "heading": "GPU",
+    "text": "GPU\n\nNVIDIA NIM for LLMs should, but is not guaranteed to, run on any NVIDIA GPU, as long as the GPU\nhas sufficient memory, or on multiple, homogeneous NVIDIA GPUs with sufficient aggregate memory\nand CUDA compute capability > 7.0 (8.0 for bfloat16).\n\nApproximate memory guidelines:\n- 5-10 GB for OS and other processes\n- 16 GB for Docker (shared memory required in multi-GPU, non-NVLink cases)\n- # model parameters * 2 GB of memory\n  - Llama 8B: ~15 GB\n  - Llama 70B: ~131 GB\n  - Mistral 7B Instruct v0.3: ~14 GB\n  - Mixtral 8x7B Instruct v0.1: ~88 GB"
+  },
+  {
+    "id": "01_getting_started_1",
+    "source": "01_getting_started",
+    "heading": "Software",
+    "text": "Software\n\n- A Linux operating system (Ubuntu 22.04 or later recommended) with glibc >= 2.35\n- NVIDIA Driver release 580 or later\n- Docker >= 23.0.1\n- CUDA 13.0\n- NVIDIA GPU(s) with sufficient memory; homogeneous multi-GPU systems with tensor parallelism supported"
+  },
+  {
+    "id": "01_getting_started_2",
+    "source": "01_getting_started",
+    "heading": "NIM Container Access",
+    "text": "NIM Container Access\n\nTo download and deploy a NIM container, join the free NVIDIA Developer Program or obtain an\nNVIDIA AI Enterprise license. To join the Developer Program: go to the NVIDIA API Catalog\n(build.nvidia.com), find a model, select the Deploy tab, click \"Get API key\", and sign in."
+  },
+  {
+    "id": "01_getting_started_3",
+    "source": "01_getting_started",
+    "heading": "Launch NVIDIA NIM for LLMs",
+    "text": "Launch NVIDIA NIM for LLMs\n\nThree deployment approaches:\n1. API Catalog: use pre-built, optimized models and LLM-specific NIM containers directly from\n   NVIDIA's API catalog.\n2. NGC: use pre-built, optimized models and LLM-specific NIM containers from the NGC registry.\n3. HuggingFace or Local Disk: use the multi-LLM compatible NIM container to deploy supported\n   HuggingFace or local models."
+  },
+  {
+    "id": "01_getting_started_4",
+    "source": "01_getting_started",
+    "heading": "Common Setup Steps",
+    "text": "Common Setup Steps\n\n**Generate an API Key (API Catalog deployments):**\n1. Navigate to the API Catalog (build.nvidia.com).\n2. Select a model.\n3. Select an Input option.\n4. Select \"Get API Key\" and sign in if prompted.\n5. Select \"Generate Key\".\n6. Copy your key and store it securely. Do not share it.\n\n**Generate an API Key (NGC deployments):**\nAn NGC Personal API key is required. Generate it on the Setup API Keys page\n(org.ngc.nvidia.com/setup/api-keys). Legacy API keys are not supported by NVIDIA NIM for LLMs;\nalways use a Personal API key. Select at least \"NGC Catalog\" from Services Included.\n\n**Export the API key:**\n```\nexport NGC_API_KEY=VALUE\n```\n\n**Docker Login (NGC deployments):**\n```\necho \"$NGC_API_KEY\" | docker login nvcr.io --username '$oauthtoken' --password-stdin\n```\nUse `$oauthtoken` as the username and `NGC_API_KEY` as the password."
+  },
+  {
+    "id": "01_getting_started_5",
+    "source": "01_getting_started",
+    "heading": "Option 2: Deploy from NGC (LLM-specific NIM)",
+    "text": "Option 2: Deploy from NGC (LLM-specific NIM)\n\nList available NIMs:\n```\nngc registry image list --format_type ascii nvcr.io/nim/*\n```\n\nLaunch example (llama-3.1-8b-instruct):\n```\nexport CONTAINER_NAME=llama-3.1-8b-instruct\nexport Repository=nim/meta/llama-3.1-8b-instruct\nexport TAG=latest\nexport IMG_NAME=\"nvcr.io/$Repository:$TAG\"\nexport LOCAL_NIM_CACHE=~/.cache/nim\nmkdir -p \"$LOCAL_NIM_CACHE\"\nchmod -R a+w \"$LOCAL_NIM_CACHE\"\n\ndocker run -it --rm --name=$CONTAINER_NAME \\\n  --runtime=nvidia \\\n  --gpus all \\\n  --shm-size=16GB \\\n  -e NGC_API_KEY=$NGC_API_KEY \\\n  -v \"$LOCAL_NIM_CACHE:/opt/nim/.cache\" \\\n  -u $(id -u) \\\n  -p 8000:8000 \\\n  $IMG_NAME\n```"
+  },
+  {
+    "id": "01_getting_started_6",
+    "source": "01_getting_started",
+    "heading": "Option 3: HuggingFace or Local Disk (Multi-LLM NIM)",
+    "text": "Option 3: HuggingFace or Local Disk (Multi-LLM NIM)\n\nSet `NIM_MODEL_NAME` to a HuggingFace repo (`hf://org/model-name`, requires `HF_TOKEN`) or a\nlocal model folder path. Supported checkpoint formats: HuggingFace full precision/quantized\nsafetensors, HuggingFace GGUF, unified HuggingFace quantized models, TRTLLM pre-built\ncheckpoints, and TRTLLM pre-built engines.\n\n```\nexport CONTAINER_NAME=LLM-NIM\nexport Repository=nim/nvidia/llm-nim\nexport TAG=latest\nexport HF_TOKEN=hf_xxxxxx\nexport IMG_NAME=\"nvcr.io/$Repository:$TAG\"\nexport NIM_MODEL_NAME=hf://meta-llama/Llama-3.1-8B-Instruct\nexport NIM_SERVED_MODEL_NAME=meta/llama-3.1-8b-instruct\nexport LOCAL_NIM_CACHE=~/.cache/nim\nmkdir -p \"$LOCAL_NIM_CACHE\"\nchmod -R a+w \"$LOCAL_NIM_CACHE\"\n\ndocker run -it --rm --name=$CONTAINER_NAME \\\n  --runtime=nvidia \\\n  --gpus all \\\n  --shm-size=16GB \\\n  -e HF_TOKEN=$HF_TOKEN \\\n  -e NIM_MODEL_NAME=$NIM_MODEL_NAME \\\n  -e NIM_SERVED_MODEL_NAME=$NIM_SERVED_MODEL_NAME \\\n  -v \"$LOCAL_NIM_CACHE:/opt/nim/.cache\" \\\n  -u $(id -u) \\\n  -p 8000:8000 \\\n  $IMG_NAME\n```"
+  },
+  {
+    "id": "01_getting_started_7",
+    "source": "01_getting_started",
+    "heading": "Docker Run Parameters",
+    "text": "Docker Run Parameters\n\n| Flag | Description |\n| --- | --- |\n| `-it` | interactive + tty |\n| `--rm` | delete container after it stops |\n| `--name` | container name for bookkeeping |\n| `--runtime=nvidia` | ensures NVIDIA drivers are accessible in the container |\n| `--gpus all` | expose all NVIDIA GPUs inside the container |\n| `--shm-size=16GB` | host memory for multi-GPU communication (not required for single GPU or NVLink) |\n| `-e NGC_API_KEY` | token to download models/resources from NGC |\n| `-v \"$LOCAL_NIM_CACHE:/opt/nim/.cache\"` | mount a cache dir so downloaded models are reused |\n| `-u $(id -u)` | avoid permission mismatches when downloading to local cache |\n| `-p 8000:8000` | forward the NIM server port to the host |"
+  },
+  {
+    "id": "01_getting_started_8",
+    "source": "01_getting_started",
+    "heading": "Run Inference",
+    "text": "Run Inference\n\nThe server exposes an OpenAI-compatible API. Check readiness before use:\n```\ncurl http://0.0.0.0:8000/v1/health/ready\n```\nList available models:\n```\ncurl -X GET 'http://0.0.0.0:8000/v1/models'\n```"
+  },
+  {
+    "id": "01_getting_started_9",
+    "source": "01_getting_started",
+    "heading": "Completions Request (base models)",
+    "text": "Completions Request (base models)\n\n```\ncurl -X 'POST' 'http://0.0.0.0:8000/v1/completions' \\\n    -H 'accept: application/json' \\\n    -H 'Content-Type: application/json' \\\n    -d '{\n      \"model\": \"meta/llama-3.1-8b-instruct\",\n      \"prompt\": \"Once upon a time\",\n      \"max_tokens\": 64\n    }'\n```\n\nUsing the OpenAI Python library:\n```python\nfrom openai import OpenAI\nclient = OpenAI(base_url=\"http://0.0.0.0:8000/v1\", api_key=\"not-used\")\nresponse = client.completions.create(\n    model=\"meta/llama-3.1-8b-instruct\",\n    prompt=\"Once upon a time\",\n    max_tokens=16,\n    stream=False\n)\nprint(response.choices[0].text)\n```"
+  },
+  {
+    "id": "01_getting_started_10",
+    "source": "01_getting_started",
+    "heading": "Chat Completions Request (chat/instruct models)",
+    "text": "Chat Completions Request (chat/instruct models)\n\n```\ncurl -X 'POST' 'http://0.0.0.0:8000/v1/chat/completions' \\\n    -H 'accept: application/json' \\\n    -H 'Content-Type: application/json' \\\n    -d '{\n      \"model\": \"meta/llama-3.1-8b-instruct\",\n      \"messages\": [\n          {\"role\":\"user\",\"content\":\"Hello! How are you?\"},\n          {\"role\":\"assistant\",\"content\":\"Hi! I am quite well, how can I help you today?\"},\n          {\"role\":\"user\",\"content\":\"Can you write me a song?\"}\n      ],\n      \"max_tokens\": 32\n    }'\n```\n\nCommon error: sending a `prompt` field to `/v1/chat/completions`, or a `messages` field to\n`/v1/completions`, returns a 400 BadRequestError naming the missing field. Verify you are\nusing the correct endpoint for the request shape you built."
+  },
+  {
+    "id": "01_getting_started_11",
+    "source": "01_getting_started",
+    "heading": "Stopping the Container",
+    "text": "Stopping the Container\n\n```\ndocker stop $CONTAINER_NAME\ndocker rm $CONTAINER_NAME\n```"
+  },
+  {
+    "id": "02_model_profiles_0",
+    "source": "02_model_profiles",
+    "heading": "Model Profiles in NVIDIA NIM for LLMs",
+    "text": "Model Profiles in NVIDIA NIM for LLMs\n\nA NIM model profile defines two things: the runtime the NIM uses, and the criteria NIM should\nuse to choose those engines. Unique strings based on a hash of the profile contents identify\neach profile.\n\nNVIDIA provides optimized model profiles for popular data-center GPU models, different GPU\ncounts, and specific numeric precisions. Optimized profiles can be pre-compiled TensorRT-LLM\nengines or backend runtime configurations across supported backends (`tensorrt_llm`, `vllm`,\n`sglang`).\n\nNVIDIA also provides generic model profiles that operate with any NVIDIA GPU (or set of GPUs)\nwith sufficient memory capacity. Hardware-specific profiles are always preferred over generic\nprofiles when available.\n\nModel profiles are embedded within the NIM container in a model manifest file, placed by\ndefault at `/opt/nim/etc/default/model_manifest.yaml`."
+  },
+  {
+    "id": "02_model_profiles_1",
+    "source": "02_model_profiles",
+    "heading": "Listing Profiles",
+    "text": "Listing Profiles\n\n```\ndocker run --rm --gpus=all -e NGC_API_KEY=$NGC_API_KEY $IMG_NAME list-model-profiles\n```\nExample output:\n```\nMODEL PROFILES\n- Compatible with system and runnable:\n  - a93a1a6b72643f2b2ee5e80ef25904f4d3f942a87f8d32da9e617eeccfaae04c (tensorrt_llm-A100-fp16-tp2-latency)\n  - 751382df4272eafc83f541f364d61b35aed9cce8c7b0c869269cea5a366cd08c (tensorrt_llm-A100-fp16-tp1-throughput)\n  - 19031a45cf096b683c4d66fff2a072c0e164a24f19728a58771ebfc4c9ade44f (vllm-fp16-tp2)\n  - 8835c31752fbc67ef658b20a9f78e056914fdef0660206d82f252d62fd96064d (vllm-fp16-tp1)\n```"
+  },
+  {
+    "id": "02_model_profiles_2",
+    "source": "02_model_profiles",
+    "heading": "Profile Selection",
+    "text": "Profile Selection\n\nSet a specific profile with `-e NIM_MODEL_PROFILE=ID`, where ID is a profile ID or profile name\nreturned by `list-model-profiles`. For example:\n`-e NIM_MODEL_PROFILE=\"tensorrt_llm-A100-fp16-tp1-throughput\"`"
+  },
+  {
+    "id": "02_model_profiles_3",
+    "source": "02_model_profiles",
+    "heading": "Automatic Profile Selection",
+    "text": "Automatic Profile Selection\n\nFor LLM-specific NIMs, if no profile is explicitly chosen, NIM selects automatically using this\nordered criteria:\n\n1. **Custom Profiles**: a cached fine-tuned custom profile is selected first if one exists.\n2. **Optimized Profiles**: chosen using this sorting logic:\n   - **Hardware**: a profile with a `gpu` tag matching the system's hardware is always\n     preferred over one that does not.\n   - **Backend Engine**: preference order is `tensorrt_llm` > `vllm` > `sglang`.\n   - **Precision**: preference order is `MXFP4` > `FP8` > `INT8` > `FP16` > `BF16` > `INT8WO`\n     > `NVFP4` > `INT4_AWQ`.\n   - **Optimization Target**: latency-optimized profiles are selected over throughput-optimized\n     profiles by default.\n   - **Tensor Parallelism (TP)**: the highest TP value supported by available GPUs is preferred.\n3. **Generic Profiles**: used if the multi-LLM NIM container is deployed or no optimized\n   profiles are compatible, following the same backend/precision/TP ordering.\n\nThe selection is logged at startup, e.g.:\n```\nDetected 2 compatible profile(s).\nValid profile: 751382df4272eafc83f541f364d61b35aed9cce8c7b0c869269cea5a366cd08c (tensorrt_llm-A100-fp16-tp1-throughput) on GPUs [0]\nValid profile: 8835c31752fbc67ef658b20a9f78e056914fdef0660206d82f252d62fd96064d (vllm-fp16-tp1) on GPUs [0]\nSelected profile: 751382df4272eafc83f541f364d61b35aed9cce8c7b0c869269cea5a366cd08c (tensorrt_llm-A100-fp16-tp1-throughput)\n```"
+  },
+  {
+    "id": "02_model_profiles_4",
+    "source": "02_model_profiles",
+    "heading": "Optimized Profiles vs. Local Build Profiles",
+    "text": "Optimized Profiles vs. Local Build Profiles\n\nBoth use TensorRT-LLM. Optimized profiles use GPU-specific TensorRT-LLM options for optimal\nthroughput/latency and cause NIM to download a pre-compiled engine. Local build profiles use\nheuristics to choose a balanced set of options and cause NIM to download raw weights and\ncompile locally, which can mean longer startup times on first deployment."
+  },
+  {
+    "id": "02_model_profiles_5",
+    "source": "02_model_profiles",
+    "heading": "Optimization Targets",
+    "text": "Optimization Targets\n\n`latency` profiles minimize Time to First Token (TTFT) and Inter-Token Latency (ITL).\n`throughput` profiles maximize total throughput per GPU, typically using the minimum number of\nGPUs required to host the model."
+  },
+  {
+    "id": "02_model_profiles_6",
+    "source": "02_model_profiles",
+    "heading": "Quantization",
+    "text": "Quantization\n\nQuantized engines with reduced numeric precision are identified by the numeric format in the\nprofile name (e.g. `fp8` vs `fp16`). All quantized engines are tested to meet the same accuracy\ncriteria as `fp16` engines. Because quantization reduces memory requirements and improves\nlatency/throughput, `fp8` models are chosen by default when available. NIM currently supports\nfp8 quantization of HF and Nemotron models."
+  },
+  {
+    "id": "03_reasoning_models_0",
+    "source": "03_reasoning_models",
+    "heading": "Use Reasoning Models with NVIDIA NIM for LLMs",
+    "text": "Use Reasoning Models with NVIDIA NIM for LLMs\n\nNIM for LLMs supports deploying reasoning models designed to generate detailed, step-by-step\nthought processes. These models are post-trained using unique system prompts to support two\nmodes: chain-of-thought responses, and concise responses. A single model can toggle between\nthe two by changing the request; no additional scaffolding is required."
+  },
+  {
+    "id": "03_reasoning_models_1",
+    "source": "03_reasoning_models",
+    "heading": "Reasoning Mode",
+    "text": "Reasoning Mode\n\nReasoning mode is controlled by the system prompt or chat template keyword arguments,\ndepending on the model. When controlled by the system prompt, the system prompt must be the\nfirst message in the conversation."
+  },
+  {
+    "id": "03_reasoning_models_2",
+    "source": "03_reasoning_models",
+    "heading": "Detailed Thinking Prompt (Llama 3.3 Nemotron Super 49B V1, Llama 3.1 Nemotron Ultra 253B V1)",
+    "text": "Detailed Thinking Prompt (Llama 3.3 Nemotron Super 49B V1, Llama 3.1 Nemotron Ultra 253B V1)\n\n| System Prompt | Description | Recommended Settings |\n| --- | --- | --- |\n| `detailed thinking on` | Long chain-of-thought style responses with explicit thinking tokens. | temperature=0.6, top_p=0.95 |\n| `detailed thinking off` | Concise responses without extended chain-of-thought. | temperature=0 |\n\nExample (detailed thinking on):\n```python\nfrom openai import OpenAI\nclient = OpenAI(base_url=\"http://0.0.0.0:8000/v1\", api_key=\"not-used\")\n\nmessages = [\n    {\"role\": \"system\", \"content\": \"detailed thinking on\"},\n    {\"role\": \"user\", \"content\": \"How many 'r's are in 'strawberry'?\"}\n]\n\nchat_response = client.chat.completions.create(\n    model=\"nvidia/llama-3.3-nemotron-super-49b-v1\",\n    messages=messages,\n    max_tokens=32768,\n    stream=False,\n    temperature=0.6,\n    top_p=0.95\n)\nprint(chat_response.choices[0].message)\n```"
+  },
+  {
+    "id": "03_reasoning_models_3",
+    "source": "03_reasoning_models",
+    "heading": "No Think Prompt (Llama 3.3 Nemotron Super 49B V1.5)",
+    "text": "No Think Prompt (Llama 3.3 Nemotron Super 49B V1.5)\n\nDetailed reasoning is on by default for this model. Use `/no_think` as the system prompt to\nget concise responses without thinking tokens (recommended temperature=0)."
+  },
+  {
+    "id": "03_reasoning_models_4",
+    "source": "03_reasoning_models",
+    "heading": "Chat Template Keyword Arguments (Nemotron 3 Nano, Nemotron 3 Super)",
+    "text": "Chat Template Keyword Arguments (Nemotron 3 Nano, Nemotron 3 Super)\n\nUse `enable_thinking` in `chat_template_kwargs` (default `True`). Set to `False` for concise\nresponses without extended chain-of-thought:\n```python\nextra_body = {\"chat_template_kwargs\": {\"enable_thinking\": False}}\nchat_response = client.chat.completions.create(\n    model=\"nvidia/nemotron-3-nano\",\n    messages=[{\"role\": \"user\", \"content\": \"Tell me a story.\"}],\n    max_tokens=32768,\n    stream=False,\n    temperature=0,\n    extra_body=extra_body,\n)\n```"
+  },
+  {
+    "id": "03_reasoning_models_5",
+    "source": "03_reasoning_models",
+    "heading": "Parallel Reasoning",
+    "text": "Parallel Reasoning\n\nSome models (Nemotron 3 Nano) support parallel reasoning traces for difficult problems via\n`parallel_reasoning_mode` in `chat_template_kwargs`: `none` (default), `low`, `medium`, or\n`heavy`. Parallel reasoning mode is incompatible with tool calling."
+  },
+  {
+    "id": "03_reasoning_models_6",
+    "source": "03_reasoning_models",
+    "heading": "Reasoning Effort",
+    "text": "Reasoning Effort\n\nThe `reasoning_effort` parameter controls how much computational effort the model spends on\nreasoning. Supported only by the Chat Completions API for GPT-OSS-20B and GPT-OSS-120B when\ndeployed using the multi-LLM NIM, and requires `-e NIM_REASONING_PARSER=openai_gptoss` at\ndeployment.\n\n| Reasoning Effort | Description | Use Case |\n| --- | --- | --- |\n| `low` | Faster responses, less reasoning depth. | Quick or time-sensitive queries. |\n| `medium` | Balanced reasoning and speed. | General-purpose reasoning tasks. |\n| `high` | Maximum reasoning depth. | Complex problem-solving. |\n\nExample request:\n```\ncurl --location 'http://0.0.0.0:8000/v1/chat/completions' \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n    \"messages\": [{\"role\": \"user\", \"content\": \"What is the role of AI in medicine?\"}],\n    \"model\": \"openai/gpt-oss-120b\",\n    \"reasoning_effort\": \"high\",\n    \"stream\": false\n  }'\n```"
+  },
+  {
+    "id": "04_tool_calling_0",
+    "source": "04_tool_calling",
+    "heading": "Function (Tool) Calling with NVIDIA NIM for LLMs",
+    "text": "Function (Tool) Calling with NVIDIA NIM for LLMs\n\nYou can connect NIM to external tools and services using function calling (also known as tool\ncalling). By providing a list of available functions, NIM can output function arguments for\nthe relevant function(s), which you can execute to augment the prompt with external\ninformation. Function calling is controlled using the `tool_choice` and `tools` request\nparameters."
+  },
+  {
+    "id": "04_tool_calling_1",
+    "source": "04_tool_calling",
+    "heading": "Prerequisites",
+    "text": "Prerequisites\n\nFor LLM-specific NIMs, do not set tool calling environment variables externally; if the\ncontainer supports tool calling, it is enabled automatically. For the multi-LLM NIM container\nrunning on the vLLM backend, tool calling requires two engine arguments:\n\n- `--enable-auto-tool-choice`: allows the model to choose between generating text or calling a\n  tool. Required for tool calling.\n- `--tool-call-parser <parser>`: a built-in parser name for extracting tool calls from model\n  output; must match the model's tool calling format (e.g. `llama3_json` for Llama 3.1/3.3).\n\nExample:\n```\ndocker run --gpus all \\\n  -e NIM_MODEL_PATH=hf://meta-llama/Llama-3.1-8B-Instruct \\\n  -p 8000:8000 \\\n  ${NIM_LLM_MODEL_FREE_IMAGE}:2.0.8 \\\n  nim-serve --enable-auto-tool-choice --tool-call-parser llama3_json\n```\n\nIn environments where CLI arguments aren't available (e.g. Kubernetes), pass them via\n`NIM_PASSTHROUGH_ARGS`:\n```\nexport NIM_PASSTHROUGH_ARGS=\"--enable-auto-tool-choice --tool-call-parser llama3_json\"\n```\n\nIf the chat completion response contains an empty `tool_call` field but the function call\nappears in the `content` field instead, the response was not post-processed into a tool call\nsuccessfully \u2014 update the chat template or use a different tool call parser."
+  },
+  {
+    "id": "04_tool_calling_2",
+    "source": "04_tool_calling",
+    "heading": "Supported Models",
+    "text": "Supported Models\n\nTool calling is automatically enabled for these LLM-specific NIM containers:\nGPT-OSS-20B and GPT-OSS-120B, Llama 3.1 models, Llama 3.2 models, Llama 3.3 models, Mistral\nmodels, Nemotron 3 Nano, Llama Nemotron Nano models (detailed thinking off), Llama Nemotron\nSuper models (detailed thinking off), Llama Nemotron Ultra models (detailed thinking off)."
+  },
+  {
+    "id": "04_tool_calling_3",
+    "source": "04_tool_calling",
+    "heading": "Inference Request Parameters for Tools",
+    "text": "Inference Request Parameters for Tools\n\n- `tool_choice`: how the model should choose tools (e.g. `auto`, `required`, `none`, or a\n  specific named tool).\n- `tools`: the list of tool objects (JSON schema function definitions) available to the model."
+  },
+  {
+    "id": "04_tool_calling_4",
+    "source": "04_tool_calling",
+    "heading": "Customizing LLMs for Function Calling",
+    "text": "Customizing LLMs for Function Calling\n\nTo effectively perform function calling, an LLM must:\n- Select the correct function(s)/tool(s) from the available options.\n- Extract and populate the correct parameters for each chosen tool from the user's natural\n  language query.\n- In multi-turn and multi-step use cases, plan and chain multiple tool calls together.\n\nAs the number and complexity of tools grows, fine-tuning (including parameter-efficient\napproaches like LoRA) can help maintain accuracy and efficiency for smaller models.\n\nOnce tool calling is enabled, use the `/v1/chat/completions` endpoint as usual, including the\n`tools` and `tool_choice` fields in the request body. The response includes a `tool_calls`\nfield on the assistant message when the model decides to invoke a tool; your application code\nis responsible for executing the named function and returning its result as a follow-up\nmessage with role `tool`."
+  }
+]
