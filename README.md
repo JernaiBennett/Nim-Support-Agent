@@ -14,6 +14,8 @@ correct before telling them it's fine.
 - **Retrieves** relevant sections from NVIDIA's NIM documentation (deployment, model profiles,
   reasoning models, tool calling) using TF-IDF search over heading-based document chunks, so
   answers cite real, current information instead of relying on the model's training data.
+  Similarity scoring runs on a custom **CUDA kernel** (via Numba) when a GPU is present, with an
+  automatic CPU fallback — see [CUDA acceleration](#cuda-accelerated-retrieval) below.
 - **Validates** developer-supplied configs with deterministic logic, not LLM guesswork:
   - `validate_docker_run` — checks a `docker run` command against NIM's actual required flags
     (`--gpus`, port mapping, API key, cache mount, user permissions).
@@ -79,6 +81,7 @@ nim-support-agent/
 ├── src/
 │   ├── chunker.py          # splits docs into heading-based retrievable chunks
 │   ├── retriever.py        # TF-IDF retrieval over the corpus
+│   ├── cuda_similarity.py  # CUDA kernel for similarity scoring, with CPU fallback
 │   ├── tools.py             # deterministic validators + tool schemas
 │   └── agent.py             # RAG + tool-calling orchestration
 ├── corpus.json              # generated chunk index
@@ -96,3 +99,32 @@ python agent.py --demo
 Runs the full retrieval and validation pipeline without needing an API key. For a live LLM
 response, set `NVIDIA_API_KEY` (free at [build.nvidia.com](https://build.nvidia.com)) and run
 `python agent.py`.
+
+## CUDA-accelerated retrieval
+
+`cuda_similarity.py` implements cosine similarity scoring as a CUDA kernel using
+[Numba](https://numba.readthedocs.io/en/stable/cuda/index.html): one GPU thread is assigned per
+document chunk, computing that chunk's similarity to the query independently of every other
+chunk — an embarrassingly parallel workload well suited to a GPU.
+
+`NimDocRetriever` uses this kernel automatically when `cuda.is_available()` returns `True`
+(i.e. a CUDA-capable GPU is present), and falls back to the original sklearn CPU path
+otherwise — the retrieval results are identical either way, only the compute backend differs.
+
+**On testing:** this was developed and validated on a machine without a GPU, using Numba's CUDA
+simulator (`NUMBA_ENABLE_CUDASIM=1`), which executes the kernel's actual logic on CPU exactly as
+written, without real hardware. The simulator run confirmed the kernel's output matches a known
+correct NumPy reference implementation to floating-point precision, and confirmed
+`NimDocRetriever` produces identical rankings through the GPU code path as through the original
+CPU path.
+
+```bash
+# Run the kernel's self-test (compares against a NumPy reference implementation)
+NUMBA_ENABLE_CUDASIM=1 python src/cuda_similarity.py
+
+# Run the full retriever through the GPU code path via the simulator
+NUMBA_ENABLE_CUDASIM=1 python src/retriever.py
+```
+
+On a machine with an actual NVIDIA GPU, the same code runs unmodified — just remove the
+`NUMBA_ENABLE_CUDASIM` environment variable.
